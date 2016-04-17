@@ -14,23 +14,44 @@ public class Customer {
 		Scanner kb = new Scanner(System.in);
 		Random random = new Random();
 		PrintWriter fout = null;
+		int mod = 0;
+		int k1 = 0;
+		try {
+			fout = new PrintWriter(new FileOutputStream("./PublicKeyDB/PublicModulus"));
+			mod = random.nextInt();
+			fout.print(mod);
+			fout.close();
+			fout = new PrintWriter(new FileOutputStream("./Customer/k"));
+			k1 = random.nextInt((mod - 1) + 1) + 1; // mod > k1 > 1
+			fout.close();
+		}catch(FileNotFoundException e) {
+			e.printStackTrace();
+		}
 		//Prompt user for number of orders and amount of money
 		System.out.print("Number of orders: ");
 		int numOrders = kb.nextInt();
 		System.out.print("Amount of money: ");
 		double amtMoney = kb.nextDouble();
+		int pubInt = 0;
 		try {
 			setKeys();
 		}catch (NoSuchAlgorithmException | InvalidKeySpecException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}try {
+			PublicKey pub = readPublicKey("./Customer/public.key");
+			byte[] pubBytes = pub.getEncoded();
+			pubInt = ByteBuffer.wrap(pubBytes).getInt();
+		}catch(IOException e){
+			e.printStackTrace();
 		}
 		
 		//Creating random numbers and identity strings (Secret splitting)
+		//This runtime... Please... Send help...
 		for(int k=0;k<numOrders;k++) {
 			long ident = Math.abs(random.nextLong());
 			int[][] identStrings = new int[numOrders][numOrders];
-			int randBits[][] = new int[numOrders][numOrders];
+			int[][] randBits = new int[numOrders][numOrders];
 			int[][] left = new int[numOrders][numOrders];
 			int[][] right = new int[numOrders][numOrders];
 
@@ -44,20 +65,24 @@ public class Customer {
 				}
 
 			for (int i = 0; i < numOrders; i++)
-				for (int j = 0; j < numOrders; j++)
+				for (int j = 0; j < numOrders; j++) {
 					left[i][j] = encrypt(randBits[i][j]);
+
+				}
 			for (int i = 0; i < numOrders; i++)
-				for (int j = 0; j < numOrders; j++)
+				for (int j = 0; j < numOrders; j++) {
 					right[i][j] = encrypt(identStrings[i][j]);
+					right[i][j] = right[i][j] * (int) Math.pow(k1,pubInt) % mod;
+				}
 
 			for (int i = 0; i < numOrders; i++)
 				for (int j = 0; j < numOrders; j++) {
 					identStrings[i][j] = iStringGen(numOrders, amtMoney, randBits[i][j]);
 				}
 			try {
-				fout = new PrintWriter(new FileOutputStream("./Money Orders/MO-"+k));
-				fout.println(amtMoney);
+				fout = new PrintWriter(new FileOutputStream("./MO-unsigned/MO-"+k));
 				fout.println(ident);
+				fout.println(amtMoney);
 				int n = 1;
 				for (int i = 0; i < numOrders; i++)
 					for (int j = 0; j < numOrders; j++) {
@@ -194,5 +219,51 @@ public class Customer {
 		}
 		int cipherInt = ByteBuffer.wrap(cipherText).getInt();
 		return cipherInt;
+	}
+
+	/**
+	 * Unblinds a money order matching given orderNum
+	 * @param orderNum
+	 * @param priv
+     */
+	public void unblind(int orderNum, PrivateKey priv){
+		Scanner fin = null;
+		String identString = "";
+		PrintWriter fout = null;
+		int c = 0;
+		int privInt = 0;
+		try {
+			fin = new Scanner(new FileInputStream("./MO-unsigned/MO-" + orderNum));
+			PublicKey pub = readPublicKey("./Customer/public.key");
+			byte[] privBytes = pub.getEncoded();
+			privInt = ByteBuffer.wrap(privBytes).getInt();
+		}catch(FileNotFoundException e){
+			e.printStackTrace();
+		}catch(IOException e){
+			e.printStackTrace();
+		}
+		String unique = fin.nextLine();
+		String amt = fin.nextLine();
+		while(fin.hasNextLine()){
+			identString += fin.nextLine();
+			c++;
+		}
+		String[] identStringArray = identString.split(",");
+		fin.close();
+		int[][] identInt = new int[c][2];
+		for(int i=0;i<c;i+=2){
+			identInt[i][0] = Integer.parseInt(identStringArray[i]);
+			identInt[i][1] = Integer.parseInt(identStringArray[i+1]);
+		}
+		try {
+			fout = new PrintWriter(new FileOutputStream("./MO-unblinded/MO-" + orderNum));
+		}catch(FileNotFoundException e){
+			e.printStackTrace();
+		}
+		fout.println(unique + "\n" + amt);
+		for(int i =0; i<c; i+=2){
+			fout.print(identStringArray[i] + "," + identStringArray[i+1]);
+		}
+		fout.close();
 	}
 }
