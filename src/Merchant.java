@@ -32,12 +32,39 @@ public class Merchant {
 	public static void main(String [] args) throws NoSuchAlgorithmException, InvalidKeySpecException, IOException{
 		Scanner keyboard = new Scanner(System.in);
 		Scanner fin = null;
+		int option = 0;
+		String moFile;
 		File keyFile = new File("./Merchant/public.key");
 		if(!keyFile.exists())
 			setKeys();
-			
+		printMenu();
+		System.out.println("Merchant Program");
+		System.out.print("Select an option: ");
+		switch(option){
+			case 1: 
+				System.out.print("Enter the name of the money order file:");
+				moFile = keyboard.next();
+				File file = new File(moFile);
+				if(!file.exists())
+					file.createNewFile();
+				fin = new Scanner(new FileReader(moFile));
+				break;
+				
+			case 2:
+				
+			case 3:
+				Random rand = new Random(42000);
+				int selectorString = rand.nextInt()*10;
+				String selectorStringBin = Integer.toBinaryString(selectorString);
+				BufferedWriter bw = new BufferedWriter(new FileWriter(("./SelectorString/"+moFile), true));
+				bw.write(selectorStringBin);
+				bw.close();
+				break;
+				
+			case 4:
+			case 5:
+		}
 		//Prompt user for money order file from customer
-		System.out.println("Merchant Digital Cash program");
 		try{
 			System.out.print("Enter the name of the money order file:");
 			String moFile = keyboard.next();
@@ -147,4 +174,11 @@ public class Merchant {
 			oin.close();
 		}
 	}
+	public static void printMenu(){
+		System.out.println("1: Select Money Order file");
+		System.out.println("2: Verify Bank signature");
+		System.out.println("3: Generate random bit string");
+		System.out.println("4: Unblind ID strings ");
+		System.out.println("5: Output Money Order for Bank");
+}
 }
