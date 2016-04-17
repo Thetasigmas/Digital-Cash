@@ -19,57 +19,57 @@ public class Customer {
 		int numOrders = kb.nextInt();
 		System.out.print("Amount of money: ");
 		double amtMoney = kb.nextDouble();
-		
-		//Prints customer identity, for testing
-		System.out.print("Customer identity: ");
-		long ident = Math.abs(random.nextLong());
-		System.out.println(ident);
-		
-		//Creating random numbers and identity strings (Secret splitting)
-		int[][] identStrings = new int[numOrders][numOrders];
-		int randBits[][] = new int[numOrders][numOrders];
-		int[][] left = new int[numOrders][numOrders];
-		int[][] right = new int[numOrders][numOrders];
 		try {
 			setKeys();
 		}catch (NoSuchAlgorithmException | InvalidKeySpecException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}for (int i = 0; i < numOrders; i++)
-			for (int j = 0; j < numOrders; j++)
-				randBits[i][j] = randomBits();
-		for (int i = 0; i < numOrders; i++)
-			for (int j = 0; j < numOrders; j++) {
-				identStrings[i][j] = iStringGen(numOrders, amtMoney, randBits[i][j]);
-			}
+		}
+		
+		//Creating random numbers and identity strings (Secret splitting)
+		for(int k=0;k<numOrders;k++) {
+			long ident = Math.abs(random.nextLong());
+			int[][] identStrings = new int[numOrders][numOrders];
+			int randBits[][] = new int[numOrders][numOrders];
+			int[][] left = new int[numOrders][numOrders];
+			int[][] right = new int[numOrders][numOrders];
 
-		for (int i = 0; i < numOrders; i++)
-			for (int j = 0; j < numOrders; j++)
-				left[i][j] = encrypt(randBits[i][j]);
-		for (int i = 0; i < numOrders; i++)
-			for (int j = 0; j < numOrders; j++)
-				right[i][j] = encrypt(identStrings[i][j]);
-
-		for (int i = 0; i < numOrders; i++)
-			for (int j = 0; j < numOrders; j++) {
-				identStrings[i][j] = iStringGen(numOrders, amtMoney, randBits[i][j]);
-			}
-
-		try {
-			fout = new PrintWriter(new FileOutputStream("test.txt"));
-			fout.println(amtMoney);
-			fout.println(ident);
-			int n = 1;
-			for(int i=0;i<numOrders;i++)
-				for(int j=0;j<numOrders;j++) {
-					fout.println(left[i][j] + "," + right[i][j]);
-					n++;
+			for (int i = 0; i < numOrders; i++)
+				for (int j = 0; j < numOrders; j++) {
+					randBits[i][j] = randomBits();
+				}
+			for (int i = 0; i < numOrders; i++)
+				for (int j = 0; j < numOrders; j++) {
+					identStrings[i][j] = iStringGen(numOrders, amtMoney, randBits[i][j]);
 				}
 
-		}catch(FileNotFoundException e){
-			e.printStackTrace();
-		}finally {
-			fout.close();
+			for (int i = 0; i < numOrders; i++)
+				for (int j = 0; j < numOrders; j++)
+					left[i][j] = encrypt(randBits[i][j]);
+			for (int i = 0; i < numOrders; i++)
+				for (int j = 0; j < numOrders; j++)
+					right[i][j] = encrypt(identStrings[i][j]);
+
+			for (int i = 0; i < numOrders; i++)
+				for (int j = 0; j < numOrders; j++) {
+					identStrings[i][j] = iStringGen(numOrders, amtMoney, randBits[i][j]);
+				}
+			try {
+				fout = new PrintWriter(new FileOutputStream("./Money Orders/MO-"+k));
+				fout.println(amtMoney);
+				fout.println(ident);
+				int n = 1;
+				for (int i = 0; i < numOrders; i++)
+					for (int j = 0; j < numOrders; j++) {
+						fout.println(left[i][j] + "," + right[i][j]);
+						n++;
+					}
+
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} finally {
+				fout.close();
+			}
 		}
 		kb.close();
 	}
