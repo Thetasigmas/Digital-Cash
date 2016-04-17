@@ -4,6 +4,7 @@ import java.nio.*;
 import java.math.*;
 import java.security.*;
 import java.security.spec.*;
+import javax.crypto.*;
 
 public class Customer {
 	private static Key publicKey; // object for the public key
@@ -12,35 +13,63 @@ public class Customer {
 	public static void main(String[] args) {
 		Scanner kb = new Scanner(System.in);
 		Random random = new Random();
-
+		PrintWriter fout = null;
 		//Prompt user for number of orders and amount of money
 		System.out.print("Number of orders: ");
 		int numOrders = kb.nextInt();
 		System.out.print("Amount of money: ");
 		double amtMoney = kb.nextDouble();
-		
-		//Prints customer identity, for testing
-		System.out.print("Customer identity: ");
-		long ident = Math.abs(random.nextLong());
-		System.out.println(ident);
-		
-		//Creating random numbers and identity strings (Secret splitting)
-		int[][] identStrings = new int[numOrders][numOrders];
-		int randBits[][] = new int[numOrders][numOrders];
-		for (int i = 0; i < numOrders; i++)
-			for (int j = 0; j < numOrders; j++)
-				randBits[i][j] = randomBits();
-		for (int i = 0; i < numOrders; i++)
-			for (int j = 0; j < numOrders; j++) {
-				identStrings[i][j] = iStringGen(numOrders, amtMoney, randBits[i][j]);
-			}
-		
-		//Bit commitment 
 		try {
 			setKeys();
-		} catch (NoSuchAlgorithmException | InvalidKeySpecException | IOException e) {
+		}catch (NoSuchAlgorithmException | InvalidKeySpecException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+		
+		//Creating random numbers and identity strings (Secret splitting)
+		for(int k=0;k<numOrders;k++) {
+			long ident = Math.abs(random.nextLong());
+			int[][] identStrings = new int[numOrders][numOrders];
+			int randBits[][] = new int[numOrders][numOrders];
+			int[][] left = new int[numOrders][numOrders];
+			int[][] right = new int[numOrders][numOrders];
+
+			for (int i = 0; i < numOrders; i++)
+				for (int j = 0; j < numOrders; j++) {
+					randBits[i][j] = randomBits();
+				}
+			for (int i = 0; i < numOrders; i++)
+				for (int j = 0; j < numOrders; j++) {
+					identStrings[i][j] = iStringGen(numOrders, amtMoney, randBits[i][j]);
+				}
+
+			for (int i = 0; i < numOrders; i++)
+				for (int j = 0; j < numOrders; j++)
+					left[i][j] = encrypt(randBits[i][j]);
+			for (int i = 0; i < numOrders; i++)
+				for (int j = 0; j < numOrders; j++)
+					right[i][j] = encrypt(identStrings[i][j]);
+
+			for (int i = 0; i < numOrders; i++)
+				for (int j = 0; j < numOrders; j++) {
+					identStrings[i][j] = iStringGen(numOrders, amtMoney, randBits[i][j]);
+				}
+			try {
+				fout = new PrintWriter(new FileOutputStream("./Money Orders/MO-"+k));
+				fout.println(amtMoney);
+				fout.println(ident);
+				int n = 1;
+				for (int i = 0; i < numOrders; i++)
+					for (int j = 0; j < numOrders; j++) {
+						fout.println(left[i][j] + "," + right[i][j]);
+						n++;
+					}
+
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} finally {
+				fout.close();
+			}
 		}
 		kb.close();
 	}
@@ -117,7 +146,7 @@ public class Customer {
 		}
 	}
 
-	PublicKey readPublicKey(String keyFileName) throws IOException {
+	static PublicKey readPublicKey(String keyFileName) throws IOException {
 		InputStream in = new FileInputStream(keyFileName);
 		ObjectInputStream oin = new ObjectInputStream(new BufferedInputStream(in));
 		try {
@@ -134,7 +163,7 @@ public class Customer {
 		}
 	}
 
-	PrivateKey readPrivateKey(String keyFileName) throws IOException {
+	static PrivateKey readPrivateKey(String keyFileName) throws IOException {
 		InputStream in = new FileInputStream(keyFileName);
 		ObjectInputStream oin = new ObjectInputStream(new BufferedInputStream(in));
 		try {
@@ -149,5 +178,21 @@ public class Customer {
 		} finally {
 			oin.close();
 		}
+	}
+	//Source: https://javadigest.wordpress.com/2012/08/26/rsa-encryption-example/
+	public static int encrypt(int text) {
+		byte[] cipherText = null;
+		try {
+			PublicKey key = readPublicKey("./Customer/public.key");
+			// get an RSA cipher object and print the provider
+			final Cipher cipher = Cipher.getInstance("RSA");
+			// encrypt the plain text using the public key
+			cipher.init(Cipher.ENCRYPT_MODE, key);
+			cipherText = cipher.doFinal(ByteBuffer.allocate(4).putInt(text).array());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		int cipherInt = ByteBuffer.wrap(cipherText).getInt();
+		return cipherInt;
 	}
 }
