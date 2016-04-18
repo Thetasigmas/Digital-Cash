@@ -3,9 +3,7 @@ import java.util.Scanner;
 import java.io.*;
 import java.math.BigInteger;
 import java.security.*;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.RSAPrivateKeySpec;
-import java.security.spec.RSAPublicKeySpec;
+import java.security.spec.*;
 
 /**
  * @author Devin Bauer
@@ -21,6 +19,7 @@ public class Merchant {
 	public static void main(String [] args) throws NoSuchAlgorithmException, InvalidKeySpecException, IOException{
 		Scanner keyboard = new Scanner(System.in);
 		Scanner fin = null;
+		boolean cont = true;
 		int option = 0;
 		String moFile = "";
 		File keyFile = new File("./Merchant/public.key");
@@ -29,8 +28,9 @@ public class Merchant {
 		printMenu();
 		System.out.println("Merchant Program");
 		System.out.print("Select an option: ");
-		switch(option){
-		case 1: 
+		do{
+			switch(option){
+		case 1: //Select Money Order file
 			System.out.print("Enter the name of the money order file:");
 			moFile = keyboard.next();
 			File file = new File(moFile);
@@ -39,7 +39,8 @@ public class Merchant {
 			fin = new Scanner(new FileReader(moFile));
 			break;
 
-		case 2:
+		case 2:	//Verify bank Signature
+			break;
 
 		case 3:	//Generate random integer to customer to determine halves of ID string to unblind		
 
@@ -52,9 +53,15 @@ public class Merchant {
 			break;
 
 		case 4:	//Output the signed, unblinded money order with ID halves for the bank
-
+			break;
 		case 5:
+			break;
+		
+		case 6:
+			cont = false;
+			break;
 		}
+		}while(cont = true);
 
 
 	}
@@ -148,5 +155,7 @@ public class Merchant {
 		System.out.println("3: Generate random bit string");
 		System.out.println("4: Unblind ID strings ");
 		System.out.println("5: Output Money Order for Bank");
+		System.out.println("6: End program");
+
 	}
 }

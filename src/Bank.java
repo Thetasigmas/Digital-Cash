@@ -1,45 +1,35 @@
 import java.io.*;
 import java.math.BigInteger;
-import java.security.InvalidKeyException;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.SecureRandom;
-import java.security.Signature;
-import java.security.SignatureException;
-import java.security.interfaces.RSAKey;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.interfaces.RSAPublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.RSAPrivateKeySpec;
-import java.security.spec.RSAPublicKeySpec;
+import java.security.*;
+import java.security.interfaces.*;
+import java.security.spec.*;
 import java.util.*;
 
 public class Bank {
 	static PublicKey publicKey;
 	static PrivateKey privateKey;
 
-	public static void main(String []args) throws FileNotFoundException, UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException, SignatureException{
+	public static void main(String []args) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException, SignatureException, InvalidKeySpecException, IOException{
 		Scanner keyIn = new Scanner(System.in);
 		double amount = 0;
 		int option ;
 		String dir = "";
 		int blindMO = 0;
+		File keyFile = new File("./Bank/public.key");
+		if(!keyFile.exists())
+			setKeys();
 		SecureRandom secRand = new SecureRandom();
 		System.out.println("Bank program:");
 		printMenu();
 		System.out.print("\nChoose an option: ");
 		option = keyIn.nextInt();
-		switch(option){
+		switch(option){	//Menu switch statement
 
 		case 1: //Generate random number to indicate which money order not to unblind
 			blindMO = secRand.nextInt(10);
 			File blindFile = new File("Blind/blindFile.txt");
 			writeBlindInt(blindFile, blindMO);
+			break;
 
 		case 2:	//Check unblinded Money orders for inconsistent amounts
 			boolean cheat = false;
@@ -112,17 +102,21 @@ public class Bank {
 			blindSig.update(bytes);
 
 			byte[]  sigBytes =blindSig.sign();
-
+			break;
 
 		case 4:
+			break;
 		}
 	}
+	
+	//Prints menu block
 	public static void printMenu(){
 		System.out.println("1: Generate random integer for customer");
 		System.out.println("2: Verify the unblinded Money Orders");
 		System.out.println("3: Sign blind Money Order");
 		System.out.println("4: Check if Money order ID has been used");
 	}
+	
 	//Method to write the random int to file for the customer not to reveal
 	private static  void writeBlindInt(File fout,int blind){
 		try {
@@ -133,6 +127,7 @@ public class Bank {
 			// TODO Auto-generated catch block
 		}
 	}
+	
 	//Method to generate RSA key pair
 	//In practice a higher key length than 2048 would increase confidentiality of the money orders, 
 	//however it would be time consuming to decrypt in use.
@@ -153,16 +148,17 @@ public class Bank {
 
 		//Sends the file name, modulus, and exponents to file for future storage,
 		//such that the Merchant can run the program multiple times once a key pair has been generated
-		writeKey("./Merchant/public.key", pub.getModulus(),pub.getPublicExponent());
-		writeKeyPublic("./Merchant/public.key", pub.getModulus(),pub.getPublicExponent());
-		writeKey("./Merchant/private.key", priv.getModulus(),priv.getPrivateExponent());
+		writeKey("./Bank/public.key", pub.getModulus(),pub.getPublicExponent());
+		writeKeyPublic("./Bank/public.key", pub.getModulus(),pub.getPublicExponent());
+		writeKey("./Bank/private.key", priv.getModulus(),priv.getPrivateExponent());
 	}
+	
 	//Writes private and public key to file for future reference.
 	//Modulus and Exponent values will be used to retrieve the keys,
 	//It is assumed that the key values are stored securely
 	public static void writeKey(String fileName,BigInteger modulus, BigInteger exponent) throws IOException {
 		ObjectOutputStream privateDB = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(fileName)));
-		ObjectOutputStream publicDB = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream("./PublicKeyDB/MerchantPublic")));
+		ObjectOutputStream publicDB = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream("./PublicKeyDB/BankPublic")));
 		try {
 			privateDB.writeObject(modulus);
 			privateDB.writeObject(exponent);
@@ -173,9 +169,10 @@ public class Bank {
 			publicDB.close();
 		}
 	}
+	
 	//Similar method to writeKey, but the public key is written to a public database instead
 	public static void writeKeyPublic(String fileName,BigInteger modulus, BigInteger exponent) throws IOException {
-		ObjectOutputStream publicDB = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream("./PublicKeyDB/MerchantPublic")));
+		ObjectOutputStream publicDB = new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream("./PublicKeyDB/BankPublic")));
 		try {
 			publicDB.writeObject(modulus);
 			publicDB.writeObject(exponent);
@@ -185,6 +182,8 @@ public class Bank {
 			publicDB.close();
 		}
 	}
+	
+	//Reads a previously stored public key
 	PublicKey readPublicKey(String keyFileName) throws IOException {
 		InputStream in = new FileInputStream(keyFileName);
 		ObjectInputStream oin = new ObjectInputStream(new BufferedInputStream(in));
@@ -201,6 +200,8 @@ public class Bank {
 			oin.close();
 		}
 	}
+	
+	//Reads a previously stored private key
 	PrivateKey readPrivateKey(String keyFileName) throws IOException {
 		InputStream in = new FileInputStream(keyFileName);
 		ObjectInputStream oin = new ObjectInputStream(new BufferedInputStream(in));
