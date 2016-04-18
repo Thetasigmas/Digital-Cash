@@ -33,7 +33,7 @@ public class Merchant {
 		Scanner keyboard = new Scanner(System.in);
 		Scanner fin = null;
 		int option = 0;
-		String moFile;
+		String moFile = "";
 		File keyFile = new File("./Merchant/public.key");
 		if(!keyFile.exists())
 			setKeys();
@@ -52,7 +52,8 @@ public class Merchant {
 				
 			case 2:
 				
-			case 3:
+			case 3:	//Generate random integer to customer to determine halves of ID string to unblind		
+
 				Random rand = new Random(42000);
 				int selectorString = rand.nextInt()*10;
 				String selectorStringBin = Integer.toBinaryString(selectorString);
@@ -61,33 +62,11 @@ public class Merchant {
 				bw.close();
 				break;
 				
-			case 4:
+			case 4:	//Output the signed, unblinded money order with ID halves for the bank
+
 			case 5:
 		}
-		//Prompt user for money order file from customer
-		try{
-			System.out.print("Enter the name of the money order file:");
-			String moFile = keyboard.next();
-			File file = new File(moFile);
-			if(!file.exists())
-				file.createNewFile();
-			fin = new Scanner(new FileReader(moFile));
-			Random rand = new Random(42000);
-			int selectorString = rand.nextInt()*10;
-			String selectorStringBin = Integer.toBinaryString(selectorString);
-			BufferedWriter bw = new BufferedWriter(new FileWriter(("./SelectorString/"+moFile), true));
-			bw.write(selectorStringBin);
-			bw.close();
-			
-		}catch(FileNotFoundException e){
-			System.out.println("Sorry, file not found");
-		}finally{
-			fin.close();
-		}
-		//Generate random integer to customer to determine halves of ID string to unblind
 		
-		
-		//Output the signed, unblinded money order with ID halves for the bank
 
 	}
 	//Method to generate RSA key pair
