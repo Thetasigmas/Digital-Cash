@@ -9,7 +9,7 @@ import java.security.spec.*;
 import javax.crypto.*;
 
 /**
- *
+ * @author Isaiah Fuller
  */
 public class Customer {
 	private static Key publicKey; // object for the public key
