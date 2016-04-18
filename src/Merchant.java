@@ -17,18 +17,7 @@ import java.security.spec.RSAPublicKeySpec;
 public class Merchant {
 	private static Key publicKey;	//object for the public key
 	private static Key privateKey;	//object for the private key
-	/**
-	 * 
-	 * Input by Customer:
-	 * Signed unblinded money order file
-	 * Pseudo random integers to be used to reveal the halves of identity strings specified by the merchant
-	 * 
-	 * Output for Bank:
-	 * Signed unblinded money order file with the halves of identity strings revealed by Customer based on Merchant’s specified bit string
-	 * @throws IOException 
-	 * @throws InvalidKeySpecException 
-	 * @throws NoSuchAlgorithmException 
-	 */
+
 	public static void main(String [] args) throws NoSuchAlgorithmException, InvalidKeySpecException, IOException{
 		Scanner keyboard = new Scanner(System.in);
 		Scanner fin = null;
@@ -41,32 +30,32 @@ public class Merchant {
 		System.out.println("Merchant Program");
 		System.out.print("Select an option: ");
 		switch(option){
-			case 1: 
-				System.out.print("Enter the name of the money order file:");
-				moFile = keyboard.next();
-				File file = new File(moFile);
-				if(!file.exists())
-					file.createNewFile();
-				fin = new Scanner(new FileReader(moFile));
-				break;
-				
-			case 2:
-				
-			case 3:	//Generate random integer to customer to determine halves of ID string to unblind		
+		case 1: 
+			System.out.print("Enter the name of the money order file:");
+			moFile = keyboard.next();
+			File file = new File(moFile);
+			if(!file.exists())
+				file.createNewFile();
+			fin = new Scanner(new FileReader(moFile));
+			break;
 
-				Random rand = new Random(42000);
-				int selectorString = rand.nextInt()*10;
-				String selectorStringBin = Integer.toBinaryString(selectorString);
-				BufferedWriter bw = new BufferedWriter(new FileWriter(("./SelectorString/"+moFile), true));
-				bw.write(selectorStringBin);
-				bw.close();
-				break;
-				
-			case 4:	//Output the signed, unblinded money order with ID halves for the bank
+		case 2:
 
-			case 5:
+		case 3:	//Generate random integer to customer to determine halves of ID string to unblind		
+
+			Random rand = new Random(42000);
+			int selectorString = rand.nextInt()*10;
+			String selectorStringBin = Integer.toBinaryString(selectorString);
+			BufferedWriter bw = new BufferedWriter(new FileWriter(("./SelectorString/"+moFile), true));
+			bw.write(selectorStringBin);
+			bw.close();
+			break;
+
+		case 4:	//Output the signed, unblinded money order with ID halves for the bank
+
+		case 5:
 		}
-		
+
 
 	}
 	//Method to generate RSA key pair
@@ -159,5 +148,5 @@ public class Merchant {
 		System.out.println("3: Generate random bit string");
 		System.out.println("4: Unblind ID strings ");
 		System.out.println("5: Output Money Order for Bank");
-}
+	}
 }
