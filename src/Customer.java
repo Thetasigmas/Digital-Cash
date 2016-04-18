@@ -1,3 +1,5 @@
+import sun.misc.BASE64Encoder;
+
 import java.util.*;
 import java.io.*;
 import java.nio.*;
@@ -6,6 +8,9 @@ import java.security.*;
 import java.security.spec.*;
 import javax.crypto.*;
 
+/**
+ *
+ */
 public class Customer {
 	private static Key publicKey; // object for the public key
 	private static Key privateKey; // object for the private key
@@ -18,11 +23,12 @@ public class Customer {
 		int k1 = 0;
 		try {
 			fout = new PrintWriter(new FileOutputStream("./PublicKeyDB/PublicModulus"));
-			mod = random.nextInt();
+			mod = Math.abs(random.nextInt());
 			fout.print(mod);
 			fout.close();
 			fout = new PrintWriter(new FileOutputStream("./Customer/k"));
 			k1 = random.nextInt((mod - 1) + 1) + 1; // mod > k1 > 1
+			fout.print(k1);
 			fout.close();
 		}catch(FileNotFoundException e) {
 			e.printStackTrace();
@@ -47,7 +53,6 @@ public class Customer {
 		}
 		
 		//Creating random numbers and identity strings (Secret splitting)
-		//This runtime... Please... Send help...
 		for(int k=0;k<numOrders;k++) {
 			long ident = Math.abs(random.nextLong());
 			int[][] identStrings = new int[numOrders][numOrders];
@@ -67,12 +72,10 @@ public class Customer {
 			for (int i = 0; i < numOrders; i++)
 				for (int j = 0; j < numOrders; j++) {
 					left[i][j] = encrypt(randBits[i][j]);
-
 				}
 			for (int i = 0; i < numOrders; i++)
 				for (int j = 0; j < numOrders; j++) {
 					right[i][j] = encrypt(identStrings[i][j]);
-					right[i][j] = right[i][j] * (int) Math.pow(k1,pubInt) % mod;
 				}
 
 			for (int i = 0; i < numOrders; i++)
@@ -80,7 +83,7 @@ public class Customer {
 					identStrings[i][j] = iStringGen(numOrders, amtMoney, randBits[i][j]);
 				}
 			try {
-				fout = new PrintWriter(new FileOutputStream("./MO-unsigned/MO-"+k));
+				fout = new PrintWriter(new FileOutputStream("./MO-unblinded/MO-"+k));
 				fout.println(ident);
 				fout.println(amtMoney);
 				int n = 1;
@@ -129,6 +132,8 @@ public class Customer {
 		KeyFactory keyFact = KeyFactory.getInstance("RSA");
 		RSAPublicKeySpec pub = keyFact.getKeySpec(keyPair.getPublic(), RSAPublicKeySpec.class); // RSA public key object
 		RSAPrivateKeySpec priv = keyFact.getKeySpec(keyPair.getPrivate(), RSAPrivateKeySpec.class); // RSA private key object
+		RSAPublicKeySpec blindPub = keyFact.getKeySpec(keyPair.getPublic(), RSAPublicKeySpec.class); // RSA public key object for blinding
+		RSAPrivateKeySpec blindPriv = keyFact.getKeySpec(keyPair.getPrivate(), RSAPrivateKeySpec.class); // RSA private key object for blinding
 		// Sends the file name, modulus, and exponents to file for future
 		// storage,
 		// such that the Merchant can run the program multiple times once a key
@@ -136,6 +141,10 @@ public class Customer {
 		writeKey("./Customer/public.key", pub.getModulus(), pub.getPublicExponent());
 		writeKeyPublic("./Customer/public.key", pub.getModulus(), pub.getPublicExponent());
 		writeKey("./Customer/private.key", priv.getModulus(), priv.getPrivateExponent());
+
+		writeKey("./Customer/blindPublic.key", blindPub.getModulus(), blindPub.getPublicExponent());
+		writeKeyPublic("./Customer/blindPublic.key", blindPub.getModulus(), blindPub.getPublicExponent());
+		writeKey("./Customer/blindPrivate.key", blindPriv.getModulus(), blindPriv.getPrivateExponent());
 	}
 
 	// Writes private and public key to file for future reference.
@@ -220,50 +229,83 @@ public class Customer {
 		int cipherInt = ByteBuffer.wrap(cipherText).getInt();
 		return cipherInt;
 	}
+	public static int decrypt(int text) {
 
+		byte[] decryptedText = null;
+		try {
+			PrivateKey key = readPrivateKey("./Customer/private.key");
+			// get an RSA cipher object and print the provider
+			final Cipher cipher = Cipher.getInstance("RSA");
+
+			// decrypt the text using the private key
+			cipher.init(Cipher.DECRYPT_MODE, key);
+			decryptedText = cipher.doFinal(ByteBuffer.allocate(4).putInt(text).array());
+
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		int decryptedInt = ByteBuffer.wrap(decryptedText).getInt();
+		return decryptedInt;
+	}
+	static public void blind(int numOrders){
+		Scanner fin = null;
+		PrintWriter fout = null;
+		for(int i=0; i<numOrders; i++){
+			String text = "";
+			String temp = "";
+			try{
+				fin = new Scanner(new FileInputStream("./MO-unblinded/MO-"+i));
+				fout = new PrintWriter(new FileOutputStream("./MO-unsigned/MO-"+i));
+			}catch(FileNotFoundException e){
+				e.printStackTrace();
+			}
+			byte[] cipherText = null;
+			try {
+				PublicKey key = readPublicKey("./Customer/blindPublic.key");
+				// get an RSA cipher object and print the provider
+				final Cipher cipher = Cipher.getInstance("RSA");
+				// encrypt the plain text using the public key
+				cipher.init(Cipher.ENCRYPT_MODE, key);
+				cipherText = cipher.doFinal(text.getBytes());
+				while(fin.hasNextLine()){
+					cipherText = cipher.doFinal(fin.nextLine().getBytes());
+					fout.println(cipherText.toString());
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally{
+				fin.close();
+				fout.close();
+			}
+
+		}
+	}
 	/**
 	 * Unblinds a money order matching given orderNum
 	 * @param orderNum
-	 * @param priv
      */
-	public void unblind(int orderNum, PrivateKey priv){
+	public static void unblind(int orderNum) {
 		Scanner fin = null;
-		String identString = "";
 		PrintWriter fout = null;
-		int c = 0;
-		int privInt = 0;
+		byte[] decryptedText = null;
+		String temp = "";
 		try {
-			fin = new Scanner(new FileInputStream("./MO-unsigned/MO-" + orderNum));
-			PublicKey pub = readPublicKey("./Customer/public.key");
-			byte[] privBytes = pub.getEncoded();
-			privInt = ByteBuffer.wrap(privBytes).getInt();
-		}catch(FileNotFoundException e){
-			e.printStackTrace();
-		}catch(IOException e){
-			e.printStackTrace();
+			fin = new Scanner(new FileInputStream("./MO-unsigned/MO-"+orderNum));
+			fout = new PrintWriter(new FileOutputStream("MO-"+orderNum));
+			PrivateKey key = readPrivateKey("./Customer/blindPrivate.key");
+			// get an RSA cipher object and print the provider
+			final Cipher cipher = Cipher.getInstance("RSA");
+			// decrypt the text using the private key
+			cipher.init(Cipher.DECRYPT_MODE, key);
+			while(fin.hasNextLine()){
+				decryptedText = cipher.doFinal(fin.nextLine().getBytes());
+				fout.println(decryptedText.toString());
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}finally{
+			fin.close();
+			fout.close();
 		}
-		String unique = fin.nextLine();
-		String amt = fin.nextLine();
-		while(fin.hasNextLine()){
-			identString += fin.nextLine();
-			c++;
-		}
-		String[] identStringArray = identString.split(",");
-		fin.close();
-		int[][] identInt = new int[c][2];
-		for(int i=0;i<c;i+=2){
-			identInt[i][0] = Integer.parseInt(identStringArray[i]);
-			identInt[i][1] = Integer.parseInt(identStringArray[i+1]);
-		}
-		try {
-			fout = new PrintWriter(new FileOutputStream("./MO-unblinded/MO-" + orderNum));
-		}catch(FileNotFoundException e){
-			e.printStackTrace();
-		}
-		fout.println(unique + "\n" + amt);
-		for(int i =0; i<c; i+=2){
-			fout.print(identStringArray[i] + "," + identStringArray[i+1]);
-		}
-		fout.close();
 	}
 }
